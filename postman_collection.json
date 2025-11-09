@@ -1,0 +1,212 @@
+{
+  "info": {
+    "name": "Meme Coin Aggregator API",
+    "description": "Collection for testing the real-time meme coin aggregation service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/health",
+          "host": ["{{base_url}}"],
+          "path": ["api", "health"]
+        },
+        "description": "Check service health and API availability"
+      }
+    },
+    {
+      "name": "Get All Tokens (Default)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/tokens",
+          "host": ["{{base_url}}"],
+          "path": ["api", "tokens"]
+        },
+        "description": "Fetch tokens with default parameters (30 tokens, sorted by volume)"
+      }
+    },
+    {
+      "name": "Get Tokens (Limited)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/tokens?limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "tokens"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        },
+        "description": "Fetch only 10 tokens"
+      }
+    },
+    {
+      "name": "Get Tokens (Sort by Volume)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/tokens?sortBy=volume&limit=20",
+          "host": ["{{base_url}}"],
+          "path": ["api", "tokens"],
+          "query": [
+            {
+              "key": "sortBy",
+              "value": "volume"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Fetch tokens sorted by volume"
+      }
+    },
+    {
+      "name": "Get Tokens (Sort by Price Change)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/tokens?sortBy=price_change&limit=15",
+          "host": ["{{base_url}}"],
+          "path": ["api", "tokens"],
+          "query": [
+            {
+              "key": "sortBy",
+              "value": "price_change"
+            },
+            {
+              "key": "limit",
+              "value": "15"
+            }
+          ]
+        },
+        "description": "Fetch tokens sorted by price change"
+      }
+    },
+    {
+      "name": "Get Tokens (Sort by Market Cap)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/tokens?sortBy=market_cap&limit=25",
+          "host": ["{{base_url}}"],
+          "path": ["api", "tokens"],
+          "query": [
+            {
+              "key": "sortBy",
+              "value": "market_cap"
+            },
+            {
+              "key": "limit",
+              "value": "25"
+            }
+          ]
+        },
+        "description": "Fetch tokens sorted by market cap"
+      }
+    },
+    {
+      "name": "Get Tokens (With Cursor)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/tokens?limit=10&cursor={{next_cursor}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "tokens"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "cursor",
+              "value": "{{next_cursor}}"
+            }
+          ]
+        },
+        "description": "Fetch next page using cursor from previous response"
+      }
+    },
+    {
+      "name": "Get Tokens (24h Timeframe)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/tokens?timeframe=24h&limit=20",
+          "host": ["{{base_url}}"],
+          "path": ["api", "tokens"],
+          "query": [
+            {
+              "key": "timeframe",
+              "value": "24h"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Fetch tokens with 24h timeframe"
+      }
+    },
+    {
+      "name": "Get Single Token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/tokens/{{token_address}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "tokens", "{{token_address}}"]
+        },
+        "description": "Fetch individual token by address. Replace {{token_address}} with actual address."
+      }
+    },
+    {
+      "name": "Get Token (Not Found)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/tokens/invalid_address_12345",
+          "host": ["{{base_url}}"],
+          "path": ["api", "tokens", "invalid_address_12345"]
+        },
+        "description": "Test 404 response for non-existent token"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "next_cursor",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_address",
+      "value": "576P1t7XsRL4ZVj38LV2eYWxXRPguBADA8BxcNz1xo8y",
+      "type": "string"
+    }
+  ]
+}

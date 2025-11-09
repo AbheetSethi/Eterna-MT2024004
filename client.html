@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme Coin Aggregator - WebSocket Test Client</title>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+        }
+        .token-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .token-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .token-item:hover {
+            background: #f9f9f9;
+        }
+        .update {
+            animation: highlight 1s ease;
+        }
+        @keyframes highlight {
+            0% { background: #fff3cd; }
+            100% { background: transparent; }
+        }
+        .log {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #007bff;
+            padding-left: 10px;
+        }
+        .price-up {
+            color: #28a745;
+        }
+        .price-down {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Meme Coin Aggregator - WebSocket Test Client</h1>
+    
+    <div class="container">
+        <h2>Connection Status</h2>
+        <div id="status" class="status disconnected">Disconnected</div>
+        <button id="connectBtn" onclick="connect()">Connect</button>
+        <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+    </div>
+
+    <div class="container">
+        <h2>Fetch Tokens</h2>
+        <button onclick="fetchTokens()">Fetch Top 20 Tokens</button>
+        <button onclick="fetchTokens('volume')">Sort by Volume</button>
+        <button onclick="fetchTokens('price_change')">Sort by Price Change</button>
+        <button onclick="fetchTokens('market_cap')">Sort by Market Cap</button>
+    </div>
+
+    <div class="container">
+        <h2>Subscribe to Updates</h2>
+        <input type="text" id="tokenAddress" placeholder="Enter token address">
+        <button onclick="subscribe()">Subscribe</button>
+        <button onclick="unsubscribe()">Unsubscribe</button>
+        <button onclick="subscribeToAll()">Subscribe to All Loaded Tokens</button>
+    </div>
+
+    <div class="container">
+        <h2>Tokens</h2>
+        <div id="tokenList" class="token-list">
+            <p>Click "Fetch Top 20 Tokens" to load data</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Event Log</h2>
+        <button onclick="clearLog()">Clear Log</button>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let socket = null;
+        let tokens = [];
+        const serverUrl = 'http://localhost:3000';
+
+        function connect() {
+            socket = io(serverUrl);
+            
+            socket.on('connect', () => {
+                updateStatus(true);
+                log('Connected to server');
+            });
+
+            socket.on('disconnect', () => {
+                updateStatus(false);
+                log('Disconnected from server');
+            });
+
+            socket.on('token:update', (data) => {
+                log(`Token update: ${data.address}`);
+                updateTokenInList(data.data);
+            });
+
+            socket.on('token:price-change', (data) => {
+                log(`Price change: ${data.address} - ${data.change.toFixed(2)}%`, 
+                    data.change > 0 ? 'price-up' : 'price-down');
+            });
+
+            socket.on('token:volume-spike', (data) => {
+                log(`Volume spike: ${data.address} - ${data.volume.toFixed(2)} SOL`, 'price-up');
+            });
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+        }
+
+        function updateStatus(connected) {
+            const statusEl = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            
+            if (connected) {
+                statusEl.textContent = 'Connected';
+                statusEl.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                statusEl.textContent = 'Disconnected';
+                statusEl.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            }
+        }
+
+        async function fetchTokens(sortBy = 'volume') {
+            try {
+                log(`Fetching tokens sorted by ${sortBy}...`);
+                const response = await fetch(`${serverUrl}/api/tokens?limit=20&sortBy=${sortBy}`);
+                const data = await response.json();
+                tokens = data.tokens;
+                displayTokens(tokens);
+                log(`Loaded ${tokens.length} tokens`);
+            } catch (error) {
+                log(`Error fetching tokens: ${error.message}`, 'price-down');
+            }
+        }
+
+        function displayTokens(tokenList) {
+            const container = document.getElementById('tokenList');
+            container.innerHTML = tokenList.map(token => `
+                <div class="token-item" data-address="${token.token_address}">
+                    <div>
+                        <strong>${token.token_name}</strong> (${token.token_ticker})
+                        <br>
+                        <small>${token.token_address.substring(0, 20)}...</small>
+                    </div>
+                    <div style="text-align: right;">
+                        <div>Price: ${token.price_sol.toFixed(8)} SOL</div>
+                        <div class="${token.price_1hr_change >= 0 ? 'price-up' : 'price-down'}">
+                            1h: ${token.price_1hr_change.toFixed(2)}%
+                        </div>
+                        <div>Volume: ${token.volume_sol.toFixed(2)} SOL</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateTokenInList(tokenData) {
+            const index = tokens.findIndex(t => t.token_address === tokenData.token_address);
+            if (index !== -1) {
+                tokens[index] = tokenData;
+                const element = document.querySelector(`[data-address="${tokenData.token_address}"]`);
+                if (element) {
+                    element.classList.add('update');
+                    setTimeout(() => element.classList.remove('update'), 1000);
+                }
+                displayTokens(tokens);
+            }
+        }
+
+        function subscribe() {
+            const address = document.getElementById('tokenAddress').value.trim();
+            if (!address) {
+                alert('Please enter a token address');
+                return;
+            }
+            if (!socket || !socket.connected) {
+                alert('Please connect first');
+                return;
+            }
+            socket.emit('subscribe', { tokenAddresses: [address] });
+            log(`Subscribed to ${address}`);
+        }
+
+        function unsubscribe() {
+            const address = document.getElementById('tokenAddress').value.trim();
+            if (!address) {
+                alert('Please enter a token address');
+                return;
+            }
+            if (!socket || !socket.connected) {
+                alert('Please connect first');
+                return;
+            }
+            socket.emit('unsubscribe', { tokenAddresses: [address] });
+            log(`Unsubscribed from ${address}`);
+        }
+
+        function subscribeToAll() {
+            if (!socket || !socket.connected) {
+                alert('Please connect first');
+                return;
+            }
+            if (tokens.length === 0) {
+                alert('Please fetch tokens first');
+                return;
+            }
+            const addresses = tokens.map(t => t.token_address);
+            socket.emit('subscribe', { tokenAddresses: addresses });
+            log(`Subscribed to ${addresses.length} tokens`);
+        }
+
+        function log(message, className = '') {
+            const logEl = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${className}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEl.insertBefore(entry, logEl.firstChild);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Auto-connect on load
+        window.onload = () => {
+            connect();
+        };
+    </script>
+</body>
+</html>
